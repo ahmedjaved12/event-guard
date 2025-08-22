@@ -1,0 +1,16 @@
+@import "tailwindcss";              /* v4: pulls in preflight + utilities (+ components if used) */
+
+/* --- Your global brand styles (optional, nice for a professional look) --- */
+:root{
+  --brand-primary: #2563eb; /* blue-600 */
+  --brand-accent:  #9333ea; /* purple-600 */
+  --bg:            #f8fafc; /* slate-50 */
+  --text:          #0f172a; /* slate-900 */
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
