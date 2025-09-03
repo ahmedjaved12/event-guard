@@ -5,7 +5,7 @@ export default function Navbar() {
         <header className="w-full fixed top-0 left-0 bg-white/80 backdrop-blur-sm border-b border-gray-200 z-50">
             <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
                 {/* Logo */}
-                <div className="text-2xl font-bold text-blue-600">EventGuard</div>
+                <div className="text-2xl font-bold text-blue-600">EventFlow</div>
 
                 {/* Nav links */}
                 <nav className="hidden md:flex space-x-8">

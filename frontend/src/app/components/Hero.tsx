@@ -8,11 +8,11 @@ export default function Hero() {
                 <div>
                     <h1 className="text-4xl md:text-6xl font-extrabold text-gray-900 leading-tight">
                         Secure & Seamless Event Management with{" "}
-                        <span className="text-blue-600">EventGuard</span>
+                        <span className="text-blue-600">EventFlow</span>
                     </h1>
                     <p className="mt-6 text-lg text-gray-600">
                         Whether you’re an organizer creating events or a participant joining them,
-                        EventGuard makes your event experience safe and effortless.
+                        EventFlow makes your event experience safe and effortless.
                     </p>
                     <div className="mt-8 flex gap-4">
                         <a

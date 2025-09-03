@@ -1,57 +1,107 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import AuthLayout from "@/app/components/AuthLayout";
+import { getOtpStatus, requestOtp, verifyOtp } from "@/app/lib/authService";
+import toast from "react-hot-toast";
+import { useSearchParams } from "next/navigation";
 
 export default function OtpPage() {
-    const OTP_LENGTH = 6;
-    const EXP_MINUTES = 10;
+    const searchParams = useSearchParams();
+    const email = searchParams.get("email");
 
+    const OTP_LENGTH = 6;
     const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(""));
     const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
-    const [timeLeft, setTimeLeft] = useState(EXP_MINUTES * 60); // seconds
+    const [timeLeft, setTimeLeft] = useState(0);
+    const [touched, setTouched] = useState(Array(OTP_LENGTH).fill(false));
+    const [submitting, setSubmitting] = useState(false);
 
-    // Countdown timer
+    // ✅ Fetch OTP status from backend
+    useEffect(() => {
+        if (!email) return;
+
+        async function fetchOtpStatus() {
+            try {
+                const res = await getOtpStatus({ email, purpose: "SIGNUP" });
+                setTimeLeft(res.data.remainingSeconds);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            } catch (err: any) {
+                toast.error(err.message || "Failed to fetch OTP status failed");
+            }
+        }
+
+        fetchOtpStatus();
+    }, [email]);
+
+    // ✅ Countdown timer
     useEffect(() => {
         if (timeLeft <= 0) return;
-        const timer = setInterval(() => setTimeLeft((t) => t - 1), 1000);
+        const timer = setInterval(() => {
+            setTimeLeft((t) => (t > 0 ? t - 1 : 0));
+        }, 1000);
         return () => clearInterval(timer);
     }, [timeLeft]);
 
     const handleChange = (value: string, index: number) => {
-        if (!/^[0-9]?$/.test(value)) return; // only numbers allowed
-
+        if (!/^[0-9]?$/.test(value)) return;
         const newOtp = [...otp];
         newOtp[index] = value;
         setOtp(newOtp);
 
-        // Move to next input automatically
+        const newTouched = [...touched];
+        newTouched[index] = true;
+        setTouched(newTouched);
+
         if (value && index < OTP_LENGTH - 1) {
             inputsRef.current[index + 1]?.focus();
         }
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
+    const handleKeyDown = (
+        e: React.KeyboardEvent<HTMLInputElement>,
+        index: number
+    ) => {
         if (e.key === "Backspace" && !otp[index] && index > 0) {
             inputsRef.current[index - 1]?.focus();
         }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    // Helper to check if all OTP digits are filled and valid
+    const isOtpValid = otp.every((digit) => /^[0-9]$/.test(digit));
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        // Mark all as touched to show errors if any
+        setTouched(Array(OTP_LENGTH).fill(true));
+        if (!isOtpValid || !email) return;
+        setSubmitting(true);
         const otpValue = otp.join("");
-        console.log("OTP entered:", otpValue);
-        // TODO: send OTP to backend for verification
+        try {
+            const res = await verifyOtp({ email, purpose: "SIGNUP", code: otpValue });
+            toast.success("OTP verified successfully");
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (err: any) {
+            toast.error(err.message || "OTP verification failed");
+        } finally {
+            setSubmitting(false);
+        }
     };
 
-    const handleResendOtp = () => {
-        setTimeLeft(EXP_MINUTES * 60);
-        setOtp(Array(OTP_LENGTH).fill(""));
-        inputsRef.current[0]?.focus();
-        console.log("Resend OTP clicked");
-        // TODO: call backend to resend OTP
+    const handleResendOtp = async () => {
+        if (!email) return;
+        try {
+            await requestOtp({ email, purpose: "SIGNUP" });
+            const res = await getOtpStatus({ email, purpose: "SIGNUP" });
+            setTimeLeft(res.data.remainingSeconds);
+            setOtp(Array(OTP_LENGTH).fill(""));
+            setTouched(Array(OTP_LENGTH).fill(false));
+            inputsRef.current[0]?.focus();
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (err: any) {
+            toast.error(err.message || "Failed to resend OTP");
+        }
     };
 
-    // Format countdown as mm:ss
     const minutes = Math.floor(timeLeft / 60);
     const seconds = timeLeft % 60;
 
@@ -64,33 +114,45 @@ export default function OtpPage() {
 
             <form onSubmit={handleSubmit} className="mt-6 space-y-6">
                 <div className="flex justify-between gap-2">
-                    {otp.map((digit, i) => (
-                        <input
-                            key={i}
-                            ref={(el) => {
-                                inputsRef.current[i] = el;
-                            }}
-                            type="text"
-                            maxLength={1}
-                            value={digit}
-                            onChange={(e) => handleChange(e.target.value, i)}
-                            onKeyDown={(e) => handleKeyDown(e, i)}
-                            className="w-12 h-12 sm:w-10 sm:h-10 text-center text-xl font-semibold rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-600 focus:outline-none"
-                        />
-                    ))}
+                    {otp.map((digit, i) => {
+                        const showError = touched[i] && !/^[0-9]$/.test(digit);
+                        return (
+                            <input
+                                key={i}
+                                ref={(el) => {
+                                    inputsRef.current[i] = el;
+                                }}
+                                type="text"
+                                maxLength={1}
+                                value={digit}
+                                onChange={(e) => handleChange(e.target.value, i)}
+                                onKeyDown={(e) => handleKeyDown(e, i)}
+                                className={`w-12 h-12 sm:w-10 sm:h-10 text-center text-xl font-semibold rounded-lg border focus:ring-2 focus:ring-blue-600 focus:outline-none ${showError
+                                    ? "border-red-500 ring-red-500"
+                                    : "border-gray-300"
+                                    }`}
+                                onBlur={() => {
+                                    const newTouched = [...touched];
+                                    newTouched[i] = true;
+                                    setTouched(newTouched);
+                                }}
+                            />
+                        );
+                    })}
                 </div>
 
                 <button
                     type="submit"
                     className="w-full mt-6 rounded-lg bg-blue-600 px-6 py-3 text-white font-semibold hover:bg-blue-700 transition"
+                    disabled={submitting}
                 >
-                    Verify
+                    {submitting ? "Verifying..." : "Verify"}
                 </button>
 
                 <div className="text-center text-sm text-gray-600 mt-4">
                     {timeLeft > 0 ? (
                         <p>
-                            Request new OTP in {" "}
+                            Request new OTP in{" "}
                             <span className="font-medium text-gray-900">
                                 {minutes}:{seconds.toString().padStart(2, "0")}
                             </span>

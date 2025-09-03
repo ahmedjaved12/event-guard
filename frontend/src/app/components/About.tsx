@@ -3,10 +3,10 @@ export default function About() {
         <section className="bg-gray-50 py-20" id="about">
             <div className="max-w-6xl mx-auto px-6 lg:px-8 text-center">
                 <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">
-                    About Event Guard
+                    About Event Flow
                 </h2>
                 <p className="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
-                    Event Guard makes creating and joining events effortless. Whether
+                    Event Flow makes creating and joining events effortless. Whether
                     you’re an organizer hosting conferences, concerts, or private
                     meetups—or a participant looking for exciting opportunities—we ensure
                     a secure and seamless experience.

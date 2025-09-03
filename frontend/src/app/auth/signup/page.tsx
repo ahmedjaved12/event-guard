@@ -12,13 +12,29 @@ export default function SignupPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
+    const [touched, setTouched] = useState({
+        name: false,
+        email: false,
+        password: false,
+    });
     const router = useRouter();
+
+    // Validation helpers
+    const isNameValid = name.trim().length > 0;
+    const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const isPasswordValid = password.length >= 6;
+
+    const isFormValid = isNameValid && isEmailValid && isPasswordValid;
 
     async function handleSignup(e: React.FormEvent) {
         e.preventDefault();
+        setTouched({ name: true, email: true, password: true });
+        if (!isFormValid) return;
         setLoading(true);
         try {
-            await signupUser({ name, email, password, role });
+            const res = await signupUser({ name, email, password, role });
+            const token = res.token;
+            localStorage.setItem("authToken", token);
             await requestOtp({ email, purpose: "SIGNUP" });
             toast.success("Signup successful! Check your email for OTP.");
             router.push(`/auth/otp?email=${encodeURIComponent(email)}`);
@@ -33,7 +49,6 @@ export default function SignupPage() {
     return (
         <AuthLayout>
             <h2 className="text-3xl font-bold text-gray-900">Create Account</h2>
-
 
             {/* Role Selection */}
             <div className="mt-6 flex gap-4">
@@ -60,24 +75,27 @@ export default function SignupPage() {
             </div>
 
             {/* Sign Up Form */}
-            <form className="mt-6 space-y-4" onSubmit={handleSignup}>
+            <form className="mt-6 space-y-4" onSubmit={handleSignup} noValidate>
                 <input
                     type="text"
                     placeholder="Full Name"
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                    className={`w-full rounded-lg border px-4 py-3 focus:ring-2 focus:ring-blue-600 focus:outline-none ${touched.name && !isNameValid ? "border-red-500" : "border-gray-300"}`}
                     onChange={(e) => setName(e.target.value)}
+                    onBlur={() => setTouched((t) => ({ ...t, name: true }))}
                 />
                 <input
                     type="email"
                     placeholder="Email"
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                    className={`w-full rounded-lg border px-4 py-3 focus:ring-2 focus:ring-blue-600 focus:outline-none ${touched.email && !isEmailValid ? "border-red-500" : "border-gray-300"}`}
                     onChange={(e) => setEmail(e.target.value)}
+                    onBlur={() => setTouched((t) => ({ ...t, email: true }))}
                 />
                 <input
                     type="password"
                     placeholder="Password"
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                    className={`w-full rounded-lg border px-4 py-3 focus:ring-2 focus:ring-blue-600 focus:outline-none ${touched.password && !isPasswordValid ? "border-red-500" : "border-gray-300"}`}
                     onChange={(e) => setPassword(e.target.value)}
+                    onBlur={() => setTouched((t) => ({ ...t, password: true }))}
                 />
 
                 {/* Hidden role input for backend */}
@@ -110,4 +128,3 @@ export default function SignupPage() {
         </AuthLayout>
     );
 }
-

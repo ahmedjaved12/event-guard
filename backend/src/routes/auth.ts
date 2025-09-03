@@ -43,7 +43,12 @@ router.post("/register", async (req, res) => {
       },
     });
 
-    const token = signAccessToken({ sub: user.id, role: user.role });
+    const token = signAccessToken({
+      sub: user.id,
+      role: user.role,
+      avatarUrl: user.avatarUrl,
+      name: user.name,
+    });
     res.status(201).json({ user: sanitizeUser(user), token });
   } catch (err) {
     console.error("register:", err);
@@ -60,6 +65,7 @@ router.post("/login", async (req, res) => {
     const { email, password } = req.body || {};
     if (!email || !password)
       return res.status(400).json({ error: "email & password required" });
+
     const e = normalizeEmail(email);
 
     const user = await prisma.user.findUnique({ where: { email: e } });
@@ -67,10 +73,22 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "invalid credentials" });
     }
 
+    // ✅ Require OTP verification before login
+    if (!user.otpVerified) {
+      return res.status(403).json({
+        error: "Email not verified. Please verify OTP before logging in.",
+      });
+    }
+
     const ok = await verifyPassword(password, user.passwordHash);
     if (!ok) return res.status(401).json({ error: "invalid credentials" });
 
-    const token = signAccessToken({ sub: user.id, role: user.role });
+    const token = signAccessToken({
+      sub: user.id,
+      role: user.role,
+      avatarUrl: user.avatarUrl,
+      name: user.name,
+    });
     res.json({ user: sanitizeUser(user), token });
   } catch (err) {
     console.error("login:", err);
@@ -123,24 +141,19 @@ router.post("/otp/request", async (req, res) => {
 
 router.get("/otp/status", async (req, res) => {
   try {
-    const { email, purpose } = req.query as {
-      email?: string;
-      purpose?: OtpPurpose; // ✅ use enum type
-    };
+    const { email, purpose } = req.query || {};
+    if (!email || !purpose)
+      return res.status(400).json({ error: "email & purpose required" });
 
-    if (!email || !purpose) {
-      return res.status(400).json({ error: "email and purpose required" });
-    }
-
-    // ✅ Only allow LOGIN or SIGNUP (enum values)
-    if (![OtpPurpose.LOGIN, OtpPurpose.SIGNUP].includes(purpose)) {
-      return res.status(400).json({ error: "purpose must be LOGIN or SIGNUP" });
+    // ✅ Only allow LOGIN or SIGNUP
+    if (!["SIGNUP", "LOGIN"].includes(purpose as string)) {
+      return res.status(400).json({ error: "invalid purpose" });
     }
 
     const otp = await prisma.otpCode.findFirst({
       where: {
-        email,
-        purpose,
+        email: email as string,
+        purpose: purpose as "SIGNUP" | "LOGIN",
         used: false,
         expiresAt: { gt: new Date() },
       },
@@ -179,6 +192,7 @@ router.post("/otp/verify", async (req, res) => {
     if (!["SIGNUP", "LOGIN"].includes(purpose)) {
       return res.status(400).json({ error: "invalid purpose" });
     }
+
     const e = normalizeEmail(email);
 
     const otp = await prisma.otpCode.findFirst({
@@ -192,18 +206,30 @@ router.post("/otp/verify", async (req, res) => {
     const ok = await verifyOtp(code, otp.codeHash);
     if (!ok) return res.status(400).json({ error: "invalid OTP" });
 
-    // mark used
+    // ✅ mark OTP as used
     await prisma.otpCode.update({
       where: { id: otp.id },
       data: { used: true },
     });
 
+    // ✅ update user and set otpVerified = true
     let user = await prisma.user.findUnique({ where: { email: e } });
     if (!user) {
       return res.status(404).json({ error: "user not found" });
     }
 
-    const token = signAccessToken({ sub: user.id, role: user.role });
+    user = await prisma.user.update({
+      where: { id: user.id },
+      data: { otpVerified: true },
+    });
+
+    // ✅ issue token
+    const token = signAccessToken({
+      sub: user.id,
+      role: user.role,
+      avatarUrl: user.avatarUrl,
+      name: user.name,
+    });
     res.json({ user: sanitizeUser(user), token });
   } catch (err) {
     console.error("otp/verify:", err);

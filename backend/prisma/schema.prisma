@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../src/generated/prisma"
@@ -26,6 +23,12 @@ enum OtpPurpose {
   RESET
 }
 
+enum EventStatus {
+  UPCOMING
+  COMPLETED
+  CANCELLED
+}
+
 model User {
   id           Int       @id @default(autoincrement())
   name         String?
@@ -33,10 +36,17 @@ model User {
   passwordHash String?
   role         Role      @default(PARTICIPANT)
   isActive     Boolean   @default(true)
-  otpVerified Boolean  @default(false)  
+  otpVerified  Boolean   @default(false)
+  avatarUrl    String?   // ✅ profile picture
+  emailNotifications Boolean @default(true) // ✅ preferences
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+
+  // Relations
+  eventsOrganized Event[] @relation("OrganizerEvents")
+  registrations   EventRegistration[]
 }
+
 
 model OtpCode {
   id        Int        @id @default(autoincrement())
@@ -48,4 +58,37 @@ model OtpCode {
   createdAt DateTime   @default(now())
 
   @@index([email, purpose, used])
+}
+
+model Event {
+  id             Int          @id @default(autoincrement())
+  title          String
+  description    String
+  imageUrl       String?
+  status         EventStatus  @default(UPCOMING)
+  date           DateTime
+  location       String
+  entryFee       Float        @default(0)
+  tags           String[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  maxParticipants Int         @default(100)
+
+  // Relations
+  organizerId   Int
+  organizer     User         @relation("OrganizerEvents", fields: [organizerId], references: [id])
+  registrations EventRegistration[]
+}
+
+model EventRegistration {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+
+  // Relations
+  eventId Int
+  userId  Int
+  event   Event @relation(fields: [eventId], references: [id])
+  user    User  @relation(fields: [userId], references: [id])
+
+  @@unique([eventId, userId]) // Prevent duplicate registration
 }
