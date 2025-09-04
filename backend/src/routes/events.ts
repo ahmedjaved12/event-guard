@@ -143,6 +143,10 @@ router.get("/", async (req, res) => {
         orderBy: { date: "asc" },
         include: {
           organizer: { select: { id: true, name: true, email: true } },
+          registrations: {
+            // 👈 include registrations
+            select: { userId: true },
+          },
         },
       }),
       prisma.event.count(),
@@ -175,6 +179,10 @@ router.get(
           orderBy: { date: "asc" },
           include: {
             organizer: { select: { id: true, name: true, email: true } },
+            registrations: {
+              // 👈 include registrations
+              select: { userId: true },
+            },
           },
         }),
         prisma.event.count({

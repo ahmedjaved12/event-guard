@@ -1,11 +1,10 @@
+// components/dashboard/RegistrationTable.tsx
 "use client";
 import { EventRegistration } from "../../lib/types";
-
 
 interface Props {
     rows: EventRegistration[];
 }
-
 
 export default function RegistrationTable({ rows }: Props) {
     return (
@@ -17,12 +16,16 @@ export default function RegistrationTable({ rows }: Props) {
                             "Reg ID",
                             "Event",
                             "Event Date",
-                            "Participant",
-                            "Email",
+                            rows[0]?.user ? "Participant" : undefined,
+                            rows[0]?.user ? "Email" : undefined,
                             "Registered At",
-                        ].map((h) => (
-                            <th key={h} style={th}>{h}</th>
-                        ))}
+                        ]
+                            .filter(Boolean)
+                            .map((h) => (
+                                <th key={h} style={th}>
+                                    {h}
+                                </th>
+                            ))}
                     </tr>
                 </thead>
                 <tbody>
@@ -31,8 +34,15 @@ export default function RegistrationTable({ rows }: Props) {
                             <td style={td}>#{r.id}</td>
                             <td style={td}>{r.event.title}</td>
                             <td style={td}>{new Date(r.event.date).toLocaleString()}</td>
-                            <td style={td}>{r.user.name || "—"}</td>
-                            <td style={td}>{r.user.email || "—"}</td>
+
+                            {/* Show participant info only for organizer view */}
+                            {r.user && (
+                                <>
+                                    <td style={td}>{r.user.name || "—"}</td>
+                                    <td style={td}>{r.user.email || "—"}</td>
+                                </>
+                            )}
+
                             <td style={td}>{new Date(r.createdAt).toLocaleString()}</td>
                         </tr>
                     ))}
@@ -41,7 +51,6 @@ export default function RegistrationTable({ rows }: Props) {
         </div>
     );
 }
-
 
 const th: React.CSSProperties = {
     textAlign: "left",
@@ -53,7 +62,6 @@ const th: React.CSSProperties = {
     top: 0,
     background: "#fafafa",
 };
-
 
 const td: React.CSSProperties = {
     padding: "12px",

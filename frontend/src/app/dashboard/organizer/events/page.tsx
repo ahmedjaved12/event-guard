@@ -12,6 +12,19 @@ import EventForm from "../../../components/dashboard/EventForm";
 import api from "../../../lib/api";
 import toast from "react-hot-toast";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function decodeJWT(token: string | null): any | null {
+    if (!token) return null;
+    try {
+        const payload = token.split(".")[1];
+        const decoded = JSON.parse(atob(payload));
+        return decoded;
+    } catch (err) {
+        console.error("Failed to decode JWT:", err);
+        return null;
+    }
+}
+
 export default function OrganizerEventsPage() {
     const [loading, setLoading] = useState(true);
     const [allEvents, setAllEvents] = useState<Event[]>([]);
@@ -19,6 +32,10 @@ export default function OrganizerEventsPage() {
     const [showForm, setShowForm] = useState(false);
     const [editingEvent, setEditingEvent] = useState<Event | null>(null);
 
+    // ✅ Get current user id from JWT
+    const token = typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
+    const decoded = decodeJWT(token);
+    const currentUserId = decoded?.sub || decoded?.id || null;
 
     useEffect(() => {
         let cancel = false;
@@ -115,7 +132,8 @@ export default function OrganizerEventsPage() {
                             <EventCard
                                 key={e.id}
                                 e={e}
-                                isCreator={true} // 👈 since this is the organizer’s dashboard
+                                isCreator={true}
+                                currentUserId={currentUserId} // 👈 since this is the organizer’s dashboard
                                 onEdit={(event) => {
                                     setEditingEvent(event); // store which event is being edited
                                     setShowForm(true); // open modal

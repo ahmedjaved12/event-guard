@@ -15,4 +15,12 @@ export const registrationService = {
     });
     return data;
   },
+
+  listForParticipant: async () => {
+    const token = localStorage.getItem("authToken");
+    const { data } = await api.get("/registrations/participant", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return data;
+  },
 };

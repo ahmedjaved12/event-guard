@@ -116,4 +116,36 @@ export const eventService = {
 
     return data;
   },
+
+  // ✅ Join event (participant only)
+  async joinEvent(eventId: number) {
+    const token = localStorage.getItem("authToken");
+    if (!token) throw new Error("Not authenticated");
+
+    const { data } = await api.post(
+      `/participants/${eventId}/join`,
+      {},
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    return data;
+  },
+
+  // ✅ Leave event (participant only)
+  async leaveEvent(eventId: number) {
+    const token = localStorage.getItem("authToken");
+    if (!token) throw new Error("Not authenticated");
+
+    const { data } = await api.post(
+      `/participants/${eventId}/leave`,
+      {},
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    return data;
+  },
 };

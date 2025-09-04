@@ -20,3 +20,5 @@ src/generated
 .next
 dist
 out
+
+backend/uploads

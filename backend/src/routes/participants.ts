@@ -5,7 +5,7 @@ import { authMiddleware, AuthRequest } from "../middleware/auth";
 
 const router = Router();
 
-// Join Event
+// ✅ Join Event
 router.post("/:eventId/join", authMiddleware, async (req: AuthRequest, res) => {
   try {
     if (!req.user || req.user.role !== "PARTICIPANT") {
@@ -24,16 +24,17 @@ router.post("/:eventId/join", authMiddleware, async (req: AuthRequest, res) => {
       return res.status(404).json({ error: "Event not found" });
     }
 
-    // Check if event already reached max participants
+    // Check if event is full
     if (event.registrations.length >= event.maxParticipants) {
       return res.status(400).json({ error: "Event is full" });
     }
 
-    await prisma.eventRegistration.create({
+    // Create registration (relation is handled automatically)
+    const registration = await prisma.eventRegistration.create({
       data: { eventId: event.id, userId: req.user.sub },
     });
 
-    res.json({ message: "Joined event successfully" });
+    res.json({ message: "Joined event successfully", registration });
   } catch (err: any) {
     if (err.code === "P2002") {
       return res.status(400).json({ error: "Already joined this event" });
@@ -43,7 +44,7 @@ router.post("/:eventId/join", authMiddleware, async (req: AuthRequest, res) => {
   }
 });
 
-// Leave Event
+// ✅ Leave Event
 router.post(
   "/:eventId/leave",
   authMiddleware,
@@ -56,14 +57,25 @@ router.post(
       }
 
       const { eventId } = req.params;
+
       await prisma.eventRegistration.delete({
         where: {
-          eventId_userId: { eventId: Number(eventId), userId: req.user.sub },
+          eventId_userId: {
+            eventId: Number(eventId),
+            userId: req.user.sub,
+          },
         },
       });
 
       res.json({ message: "Left event successfully" });
-    } catch {
+    } catch (err: any) {
+      if (err.code === "P2025") {
+        // Nothing to delete
+        return res
+          .status(400)
+          .json({ error: "You are not registered for this event" });
+      }
+      console.error("Leave event error:", err);
       res.status(500).json({ error: "Failed to leave event" });
     }
   }

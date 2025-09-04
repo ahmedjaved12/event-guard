@@ -11,10 +11,29 @@ import heroImg from "@/app/assets/images/hero.png";
 import { toast } from "react-hot-toast";
 import api from "../../../lib/api";
 
+// ✅ Small helper to decode JWT safely
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function decodeJWT(token: string | null): any | null {
+    if (!token) return null;
+    try {
+        const payload = token.split(".")[1];
+        const decoded = JSON.parse(atob(payload));
+        return decoded;
+    } catch (err) {
+        console.error("Failed to decode JWT:", err);
+        return null;
+    }
+}
+
 export default function ParticipantEventsPage() {
     const [loading, setLoading] = useState(true);
     const [allEvents, setAllEvents] = useState<Event[]>([]);
     const [filters, setFilters] = useState<EventFilterState>({ q: "", status: "ALL" });
+
+    // ✅ Get current user id from JWT
+    const token = typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
+    const decoded = decodeJWT(token);
+    const currentUserId = decoded?.sub || decoded?.id || null;
 
     useEffect(() => {
         let cancel = false;
@@ -29,7 +48,9 @@ export default function ParticipantEventsPage() {
                 if (!cancel) setLoading(false);
             }
         })();
-        return () => { cancel = true; };
+        return () => {
+            cancel = true;
+        };
     }, []);
 
     const events = useMemo(() => {
@@ -77,7 +98,7 @@ export default function ParticipantEventsPage() {
 
             // Update UI optimistically
             setAllEvents((prev) =>
-                prev.map((e) => e.id === event.id ? { ...e, isRegistered: !isRegistered } : e)
+                prev.map((e) => (e.id === event.id ? { ...e, isRegistered: !isRegistered } : e))
             );
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
@@ -119,8 +140,8 @@ export default function ParticipantEventsPage() {
                             <EventCard
                                 key={e.id}
                                 e={e}
+                                currentUserId={currentUserId} // ✅ pass user id
                                 isCreator={false}
-
                             />
                         ))}
                     </div>
