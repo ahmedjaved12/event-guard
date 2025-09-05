@@ -7,7 +7,6 @@ import { User } from "../../../lib/types";
 import defaultAvatar from "@/app/assets/images/user.png";
 import Image from "next/image";
 import toast from "react-hot-toast";
-import { useRouter } from "next/navigation"; // ✅ for redirect
 
 export default function OrganizerSettingsPage() {
     const { user, loading } = useCurrentUser();
@@ -18,7 +17,6 @@ export default function OrganizerSettingsPage() {
     const [saving, setSaving] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const router = useRouter(); // ✅ for navigation
 
     useEffect(() => {
         if (!loading && user) {
@@ -52,12 +50,6 @@ export default function OrganizerSettingsPage() {
         }
     }
 
-    function onLogout() {
-        userService.logout(); // ✅ clear token
-        toast.success("Logged out successfully");
-        router.push("/auth/login"); // ✅ redirect
-    }
-
     if (loading) return <div className="p-6">Loading...</div>;
     if (!user) return <div className="p-6">Unauthorized. Please log in.</div>;
 
@@ -65,17 +57,7 @@ export default function OrganizerSettingsPage() {
         <div className="max-w-3xl mx-auto space-y-8 p-6">
             {/* Profile card */}
             <div className="bg-white shadow-md rounded-2xl p-6 space-y-6">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold text-gray-800">Profile</h2>
-
-                    {/* ✅ Logout button */}
-                    <button
-                        onClick={onLogout}
-                        className="px-4 py-2 text-sm font-medium text-red-600 border border-red-600 rounded-lg hover:bg-red-600 hover:text-white transition"
-                    >
-                        Logout
-                    </button>
-                </div>
+                <h2 className="text-xl font-semibold text-gray-800">Profile</h2>
 
                 {/* Avatar */}
                 <div className="flex flex-col items-center">
@@ -95,6 +77,7 @@ export default function OrganizerSettingsPage() {
                             className="w-24 h-24 rounded-full object-cover border-2 border-gray-200 shadow-sm hover:opacity-80 transition"
                             style={{ objectFit: "cover" }}
                             unoptimized={!!avatarFile || !!me?.avatarUrl}
+                        // unoptimized disables optimization for dynamic URLs (like from URL.createObjectURL or remote URLs)
                         />
                         <span className="absolute bottom-0 right-0 bg-blue-600 text-white text-xs px-2 py-1 rounded-full shadow">
                             Change
@@ -149,7 +132,7 @@ export default function OrganizerSettingsPage() {
             </div>
 
             {/* Save button */}
-            <div className="flex gap-4">
+            <div>
                 <button
                     onClick={onSave}
                     disabled={saving}

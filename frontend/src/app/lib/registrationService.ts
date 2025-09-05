@@ -23,4 +23,26 @@ export const registrationService = {
     });
     return data;
   },
+
+  async listForAdmin(params: { page?: number; limit?: number } = {}) {
+    const token = localStorage.getItem("authToken");
+    if (!token) throw new Error("Not authenticated");
+
+    const { data } = await api.get<{
+      data: EventRegistration[];
+      pagination: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+      };
+    }>("/admin/registrations", {
+      params,
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    return data;
+  },
 };
